@@ -1,0 +1,17 @@
+name: "ZUNRDP WINDOWS"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  win:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Enable RDP
+        run: |
+          reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+          netsh advfirewall firewall add rule name="RDP" dir=in action=allow protocol=TCP localport=3389
+          net user ADMINZUN ZunRDP@123456 /add
+          net localgroup administrators ADMINZUN /add
