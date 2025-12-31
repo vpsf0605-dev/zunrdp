@@ -1,17 +1,52 @@
-name: "ZUNRDP WINDOWS"
+name: "🚀 ZUNRDP WINDOWS"
 
 on:
   workflow_dispatch:
 
 jobs:
-  win:
+  windows:
     runs-on: windows-latest
     timeout-minutes: 360
 
     steps:
-      - name: Enable RDP
+      - name: 🪟 Enable RDP + User
+        shell: powershell
         run: |
-          reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+          Write-Host "=== ENABLE RDP ==="
+          Set-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server' fDenyTSConnections 0
           netsh advfirewall firewall add rule name="RDP" dir=in action=allow protocol=TCP localport=3389
-          net user ADMINZUN ZunRDP@123456 /add
-          net localgroup administrators ADMINZUN /add
+
+          Write-Host "=== CREATE USER ==="
+          $u="ADMINZUN"
+          $p=ConvertTo-SecureString "ZunRDP@123456" -AsPlainText -Force
+          if (Get-LocalUser -Name $u -ErrorAction SilentlyContinue) {
+            Remove-LocalUser $u
+          }
+          New-LocalUser $u -Password $p -AccountNeverExpires
+          Add-LocalGroupMember Administrators $u
+          Add-LocalGroupMember "Remote Desktop Users" $u
+
+      - name: 🌐 Install & Login Tailscale
+        shell: powershell
+        run: |
+          Write-Host "=== INSTALL TAILSCALE ==="
+          Invoke-WebRequest https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi -OutFile tailscale.msi
+          Start-Process msiexec.exe -ArgumentList "/i tailscale.msi /quiet /norestart" -Wait
+
+          Write-Host "=== LOGIN TAILSCALE ==="
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up `
+            --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} `
+            --hostname=zun-win `
+            --reset
+
+          Write-Host "=== TAILSCALE IP ==="
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
+
+      - name: ⏳ Keep Windows Alive
+        shell: powershell
+        run: |
+          Write-Host "=== WINDOWS ONLINE ==="
+          while ($true) {
+            Write-Host "RUNNING..."
+            Start-Sleep 60
+          }
